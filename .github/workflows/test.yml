@@ -22,7 +22,7 @@ jobs:
 
       - name: Debug Environment Variables
         run: |
-          echo "PERSONAL_TOKEN=$PERSONAL_TOKEN"
+          echo "PERSONAL_TOKEN=${{ secrets.PERSONAL_TOKEN }}
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
