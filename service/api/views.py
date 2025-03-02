@@ -23,12 +23,12 @@ class UnauthorizedMessage(BaseModel):
     Ответ при ошибке 401 при отсутствующем или неверном Bearer токене
     """
 
-    detail: str = 'Bearer token missing or unknown'
-    description: str = 'Вы не указали Bearer token или указали неверный'
+    detail: str = "Bearer token missing or unknown"
+    description: str = "Вы не указали Bearer token или указали неверный"
 
 
 class SuccessMessage(BaseModel):
-    detail: str = 'Вы успешно достучались до /health'
+    detail: str = "Вы успешно достучались до /health"
 
 
 class ModelNotFoundMessage(BaseModel):
@@ -36,8 +36,8 @@ class ModelNotFoundMessage(BaseModel):
     Ответ при ошибке 404 при неправильном имени модели
     """
 
-    detail: str = 'Model is not found'
-    description: str = 'Вы ввели неправильное имя модели'
+    detail: str = "Model is not found"
+    description: str = "Вы ввели неправильное имя модели"
 
 
 router = APIRouter()
@@ -51,45 +51,45 @@ async def get_current_user(
     if not auth or not auth.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Bearer token is missing',
+            detail="Bearer token is missing",
         )
 
     token = auth.credentials
-    if token not in [os.getenv('PERSONAL_TOKEN')]:
+    if token not in [os.getenv("PERSONAL_TOKEN")]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token',
+            detail="Invalid token",
         )
 
     return token
 
 
-@router.get(path='/health', tags=['Health'], responses={status.HTTP_200_OK: {'model': SuccessMessage}})
+@router.get(path="/health", tags=["Health"], responses={status.HTTP_200_OK: {"model": SuccessMessage}})
 async def health(token: str = Depends(get_current_user)) -> str:
-    return 'I am alive'
+    return "I am alive"
 
 
 @router.get(
-    path='/reco/{model_name}/{user_id}',
-    tags=['Recommendations'],
+    path="/reco/{model_name}/{user_id}",
+    tags=["Recommendations"],
     response_model=RecoResponse,
     responses={
-        status.HTTP_200_OK: {'model': RecoResponse},
-        status.HTTP_401_UNAUTHORIZED: {'model': UnauthorizedMessage},
-        status.HTTP_404_NOT_FOUND: {'model': ModelNotFoundMessage},
+        status.HTTP_200_OK: {"model": RecoResponse},
+        status.HTTP_401_UNAUTHORIZED: {"model": UnauthorizedMessage},
+        status.HTTP_404_NOT_FOUND: {"model": ModelNotFoundMessage},
     },
 )
 async def get_reco(
     request: Request, model_name: str, user_id: int, token: str = Depends(get_current_user)
 ) -> RecoResponse:
-    app_logger.info(f'Request for model: {model_name}, user_id: {user_id}')
+    app_logger.info(f"Request for model: {model_name}, user_id: {user_id}")
 
     if user_id > 10**9:
-        raise UserNotFoundError(error_message=f'User {user_id} not found')
+        raise UserNotFoundError(error_message=f"User {user_id} not found")
 
     k_recs = request.app.state.k_recs
 
-    if model_name == 'range_model':
+    if model_name == "range_model":
         reco = list(range(k_recs))
     else:
         raise HTTPException(
