@@ -1,11 +1,14 @@
 import os
 from http import HTTPStatus
 
+from dotenv import load_dotenv
 from starlette.testclient import TestClient
 
 from service.settings import ServiceConfig
 
 GET_RECO_PATH = "/reco/{model_name}/{user_id}"
+
+load_dotenv()
 
 
 def test_health(client: TestClient) -> None:
@@ -21,7 +24,7 @@ def test_get_reco_success(
 ) -> None:
     print(f'PERSONAL_TOKEN: {os.getenv("PERSONAL_TOKEN")}')
     user_id = 123
-    path = GET_RECO_PATH.format(model_name="initial_recsys_model", user_id=user_id)
+    path = GET_RECO_PATH.format(model_name="range_model", user_id=user_id)
     with client:
         response = client.get(path, headers={"Authorization": f'Bearer {os.getenv("PERSONAL_TOKEN")}'})
     assert response.status_code == HTTPStatus.OK
@@ -36,7 +39,7 @@ def test_get_reco_for_unknown_user(
 ) -> None:
     print(f'PERSONAL_TOKEN: {os.getenv("PERSONAL_TOKEN")}')
     user_id = 10**10
-    path = GET_RECO_PATH.format(model_name="initial_recsys_model", user_id=user_id)
+    path = GET_RECO_PATH.format(model_name="range_model", user_id=user_id)
     with client:
         response = client.get(path, headers={"Authorization": f'Bearer {os.getenv("PERSONAL_TOKEN")}'})
     assert response.status_code == HTTPStatus.NOT_FOUND
