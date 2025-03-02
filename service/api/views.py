@@ -20,24 +20,24 @@ class RecoResponse(BaseModel):
 
 class UnauthorizedMessage(BaseModel):
     """
-    Ответ при ошибке 401 при отсутствующем или неверном Bearer токене
+    Answer for 401 error about missing or unknown Bearer token
     """
 
     detail: str = "Bearer token missing or unknown"
-    description: str = "Вы не указали Bearer token или указали неверный"
+    description: str = "You don't use Bearer token or choose incorrect one"
 
 
 class SuccessMessage(BaseModel):
-    detail: str = "Вы успешно достучались до /health"
+    detail: str = "You've succesfully rich /health"
 
 
 class ModelNotFoundMessage(BaseModel):
     """
-    Ответ при ошибке 404 при неправильном имени модели
+    Answer for 404 error about incorrect model name
     """
 
     detail: str = "Model is not found"
-    description: str = "Вы ввели неправильное имя модели"
+    description: str = "You choose incorrect model name"
 
 
 router = APIRouter()
@@ -55,7 +55,7 @@ async def get_current_user(
         )
 
     token = auth.credentials
-    if token not in [os.getenv("PERSONAL_TOKEN")]:
+    if token != os.getenv("API_KEY"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
