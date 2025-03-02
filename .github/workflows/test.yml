@@ -10,14 +10,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-20.04
-
+    env:
+      PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Set environment variable from secrets
-        env:
-          PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}  # Секрет передается как переменная окружения
         run: |
           echo "PERSONAL_TOKEN is set: ${{ secrets.PERSONAL_TOKEN }}"
 
