@@ -20,6 +20,10 @@ jobs:
         with:
           python-version: 3.9
 
+      - name: Debug Environment Variables
+        run: |
+          echo "PERSONAL_TOKEN=$PERSONAL_TOKEN"
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
@@ -38,6 +42,8 @@ jobs:
         run: poetry install 
       
       - name: Run tests
+        env:
+          PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         run: make lint
 
       - name: Run linters
