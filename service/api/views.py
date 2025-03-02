@@ -1,10 +1,16 @@
-from typing import List
+import os
+from typing import List, Optional
 
-from fastapi import APIRouter, FastAPI, Request
+from dotenv import load_dotenv
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from starlette import status
 
 from service.api.exceptions import UserNotFoundError
 from service.log import app_logger
+
+load_dotenv()
 
 
 class RecoResponse(BaseModel):
@@ -12,14 +18,54 @@ class RecoResponse(BaseModel):
     items: List[int]
 
 
+class UnauthorizedMessage(BaseModel):
+    """
+    Answer for 401 error about missing or unknown Bearer token
+    """
+
+    detail: str = "Bearer token missing or unknown"
+    description: str = "You don't use Bearer token or choose incorrect one"
+
+
+class SuccessMessage(BaseModel):
+    detail: str = "You've succesfully rich /health"
+
+
+class ModelNotFoundMessage(BaseModel):
+    """
+    Answer for 404 error about incorrect model name
+    """
+
+    detail: str = "Model is not found"
+    description: str = "You choose incorrect model name"
+
+
 router = APIRouter()
 
+get_bearer_token = HTTPBearer(auto_error=False)
 
-@router.get(
-    path="/health",
-    tags=["Health"],
-)
-async def health() -> str:
+
+async def get_current_user(
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(get_bearer_token),
+) -> str:
+    if not auth or not auth.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer token is missing",
+        )
+
+    token = auth.credentials
+    if token != os.getenv("API_KEY"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+
+    return token
+
+
+@router.get(path="/health", tags=["Health"], responses={status.HTTP_200_OK: {"model": SuccessMessage}})
+async def health(token: str = Depends(get_current_user)) -> str:
     return "I am alive"
 
 
@@ -27,21 +73,29 @@ async def health() -> str:
     path="/reco/{model_name}/{user_id}",
     tags=["Recommendations"],
     response_model=RecoResponse,
+    responses={
+        status.HTTP_200_OK: {"model": RecoResponse},
+        status.HTTP_401_UNAUTHORIZED: {"model": UnauthorizedMessage},
+        status.HTTP_404_NOT_FOUND: {"model": ModelNotFoundMessage},
+    },
 )
 async def get_reco(
-    request: Request,
-    model_name: str,
-    user_id: int,
+    request: Request, model_name: str, user_id: int, token: str = Depends(get_current_user)
 ) -> RecoResponse:
     app_logger.info(f"Request for model: {model_name}, user_id: {user_id}")
-
-    # Write your code here
 
     if user_id > 10**9:
         raise UserNotFoundError(error_message=f"User {user_id} not found")
 
     k_recs = request.app.state.k_recs
-    reco = list(range(k_recs))
+
+    if model_name == "range_model":
+        reco = list(range(k_recs))
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ModelNotFoundMessage().detail,
+        )
     return RecoResponse(user_id=user_id, items=reco)
 
 
