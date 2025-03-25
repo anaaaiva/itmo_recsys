@@ -1,6 +1,7 @@
 import os
 from typing import List, Optional
 
+import pandas as pd
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
@@ -9,6 +10,8 @@ from starlette import status
 
 from service.api.exceptions import UserNotFoundError
 from service.log import app_logger
+
+from ..recsys_models.models import get_offline_recomendations, load_knn
 
 load_dotenv()
 
@@ -43,6 +46,13 @@ class ModelNotFoundMessage(BaseModel):
 router = APIRouter()
 
 get_bearer_token = HTTPBearer(auto_error=False)
+
+MODEL_PATH = "service/recsys_models/tfidf_model_with_popular.pkl"
+if os.path.exists(MODEL_PATH):
+    tfidf_model_with_popular = load_knn(MODEL_PATH)
+
+offline_tfidf_model_with_popular_df = pd.read_parquet("service/recsys_models/knn_tfidf_model_predictions.parquet")
+offline_tfidf_model_with_popular_df.set_index("user_id", inplace=True)
 
 
 async def get_current_user(
@@ -91,6 +101,10 @@ async def get_reco(
 
     if model_name == "range_model":
         reco = list(range(k_recs))
+    elif model_name == "tfidf_model_with_popular":
+        reco = tfidf_model_with_popular.recommend([user_id], k_recs).item_id.tolist()
+    elif model_name == "offline_tfidf_model_with_popular":
+        reco = get_offline_recomendations(user_id, offline_tfidf_model_with_popular_df)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
