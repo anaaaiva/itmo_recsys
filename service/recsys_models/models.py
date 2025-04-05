@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from rectools.dataset.identifiers import IdMap
 from rectools.models import ImplicitALSWrapperModel
@@ -10,6 +10,18 @@ from service.recsys_models.knn_model import UserKnn, load_knn
 
 # TODO: написать аналогичный класс для модели популярного и убрать хардкод
 popular_ans = [10440, 15297, 9728, 13865, 4151, 3734, 2657, 4880, 142, 6809]
+
+
+def safe_load_pickle(path: str) -> Any:
+    try:
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+            return obj
+    except FileNotFoundError:
+        print("Файлы не найдены, модель не загружена")
+        return None
+    except pickle.UnpicklingError as e:
+        raise pickle.UnpicklingError(f"Ошибка при распаковке файла {path}: {e}")
 
 
 class UserKNN:
@@ -26,7 +38,7 @@ class UserKNN:
             self.load_flag = True
 
     def predict(self, user_id: int) -> List[int]:
-        if user_id in self.user_knn.users_mapping:
+        if user_id in self.user_knn.users_mapping and self.load_flag:
             # self.user_knn is not None and hasattr(self.user_knn, "users_mapping")
             reco = self.user_knn.recommend([user_id], self.N_recs).item_id.to_list()
             if len(reco) < self.N_recs:
@@ -50,15 +62,11 @@ class ANN_ALS:
 
     def load(self) -> None:
         if not self.load_flag:
-            with open("service/recsys_models/als/als.pkl", "rb") as file:
-                self.als_wrapper = pickle.load(file)
+            self.als_wrapper = safe_load_pickle("service/recsys_models/als/als.pkl")
             if self.als_wrapper is not None:
                 self.user_vectors, self.item_vectors = self.als_wrapper.get_vectors()
-
-                with open("service/recsys_models/als/user_id_map.pkl", "rb") as file:
-                    self.user_id_map = pickle.load(file)
-                with open("service/recsys_models/als/item_id_map.pkl", "rb") as file:
-                    self.item_id_map = pickle.load(file)
+                self.user_id_map = safe_load_pickle("service/recsys_models/als/user_id_map.pkl")
+                self.item_id_map = safe_load_pickle("service/recsys_models/als/item_id_map.pkl")
 
                 index_init_params = {"method": "hnsw", "space": "negdotprod"}
                 self.ann = UserToItemAnnRecommender(
@@ -72,7 +80,7 @@ class ANN_ALS:
                 self.load_flag = True
 
     def predict(self, user_id: int) -> list:
-        if user_id in self.user_id_map.external_ids:
+        if user_id in self.user_id_map.external_ids and self.load_flag:
             # self.user_id_map is not None and hasattr(self.user_id_map, "external_ids")
             if self.ann is not None:
                 return self.ann.get_item_list_for_user(user_id, top_n=self.N_recs).tolist()
