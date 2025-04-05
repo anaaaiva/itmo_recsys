@@ -1,7 +1,7 @@
 import os
 import pickle
 from collections import Counter
-from typing import Any, Union
+from typing import Any, List, Union
 
 import numpy as np
 import pandas as pd
@@ -172,7 +172,7 @@ class UserKnn:
 
         return recs
 
-    def recommend(self, users: np.ndarray, k: int) -> pd.DataFrame:
+    def recommend(self, users: List[int], k: int) -> pd.DataFrame:
         """
         Generate top-k recommendations for the specified list of users.
 
