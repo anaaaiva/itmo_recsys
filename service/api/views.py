@@ -11,7 +11,8 @@ from starlette import status
 from service.api.exceptions import UserNotFoundError
 from service.log import app_logger
 
-from ..recsys_models.models import get_offline_recomendations, load_knn
+from ..recsys_models.knn_model import get_offline_recomendations, load_knn
+from ..recsys_models.models import ANN_ALS
 
 load_dotenv()
 
@@ -57,6 +58,9 @@ offline_tfidf_model_with_popular_df = None
 if os.path.exists(KNN_MODEL_PREDICTIONS_PATH):
     offline_tfidf_model_with_popular_df = pd.read_parquet(KNN_MODEL_PREDICTIONS_PATH)
     offline_tfidf_model_with_popular_df.set_index("user_id", inplace=True)
+
+ann_als_model = ANN_ALS(10)
+ann_als_model.load()
 
 
 async def get_current_user(
@@ -119,6 +123,8 @@ async def get_reco(
                 detail="offline_tfidf_model_with_popular is not loaded",
             )
         reco = get_offline_recomendations(user_id, offline_tfidf_model_with_popular_df)
+    elif model_name == "ann_als_f128":
+        reco = ann_als_model.predict(user_id)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
