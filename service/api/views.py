@@ -12,7 +12,7 @@ from service.api.exceptions import UserNotFoundError
 from service.log import app_logger
 
 from ..recsys_models.knn_model import get_offline_recomendations, load_knn
-from ..recsys_models.models import ANN_ALS
+from ..recsys_models.models import ANN_ALS, ANN_DSSM
 
 load_dotenv()
 
@@ -61,6 +61,9 @@ if os.path.exists(KNN_MODEL_PREDICTIONS_PATH):
 
 ann_als_model = ANN_ALS(10)
 ann_als_model.load()
+
+ann_dssm_model = ANN_DSSM(10)
+ann_dssm_model.load()
 
 
 async def get_current_user(
@@ -125,6 +128,8 @@ async def get_reco(
         reco = get_offline_recomendations(user_id, offline_tfidf_model_with_popular_df)
     elif model_name == "ann_als_f128":
         reco = ann_als_model.predict(user_id)
+    elif model_name == "dssm":
+        reco = ann_dssm_model.predict(user_id)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -2,6 +2,8 @@ import os
 import pickle
 from typing import Any, List, Optional
 
+import nmslib
+import numpy as np
 from rectools.dataset.identifiers import IdMap
 from rectools.models import ImplicitALSWrapperModel
 from rectools.tools.ann import UserToItemAnnRecommender
@@ -84,4 +86,43 @@ class ANN_ALS:
             # self.user_id_map is not None and hasattr(self.user_id_map, "external_ids")
             if self.ann is not None:
                 return self.ann.get_item_list_for_user(user_id, top_n=self.N_recs).tolist()
+        return self.popular_model_answer
+
+
+class ANN_DSSM:
+    def __init__(self, N_recs: int = 10):
+        self.N_recs: int = N_recs
+        self.load_flag: bool = False
+        self.popular_model_answer: List[int] = popular_ans
+        self.user_vectors: Optional[np.ndarray]
+        self.item_vectors: Optional[np.ndarray]
+
+        self.user_id_map: Optional[dict]
+        self.item_id_map: Optional[dict]
+        self.reverse_user_id_map: Optional[dict]
+
+        self.index: Optional[nmslib.FloatIndex]
+
+    def load(self) -> None:
+        if not self.load_flag:
+            load_dir = "service/recsys_models/dssm"
+            self.user_vectors = np.load(f"{load_dir}/user_vectors.npy")
+            self.item_vectors = np.load(f"{load_dir}/item_vectors.npy")
+
+            with open(f"{load_dir}/user_id_map.pkl", "rb") as f:
+                self.user_id_map = pickle.load(f)
+            with open(f"{load_dir}/item_id_map.pkl", "rb") as f:
+                self.item_id_map = pickle.load(f)
+            with open(f"{load_dir}/reverse_user_id_map.pkl", "rb") as f:
+                self.reverse_user_id_map = pickle.load(f)
+
+            self.index = nmslib.init(method="hnsw", space="negdotprod")
+            self.index.loadIndex(f"{load_dir}/ann_index.nmslib")
+
+    def predict(self, user_id: int) -> list:
+        if user_id in self.reverse_user_id_map and self.load_flag:
+            user_idx = self.reverse_user_id_map[user_id]
+            user_vector = self.user_vectors[user_idx]
+            ids, _ = self.index.knnQuery(user_vector, k=self.N_recs)
+            return [self.item_id_map[i] for i in ids]
         return self.popular_model_answer
