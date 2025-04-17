@@ -106,6 +106,9 @@ class ANN_DSSM:
     def load(self) -> None:
         if not self.load_flag:
             load_dir = "service/recsys_models/dssm"
+            if not os.path.exists(f"{load_dir}/user_vectors.npy") or os.path.exists(f"{load_dir}/items_vectors.npy"):
+                print("Model files not found — skipping ANN_DSSM load")
+                return
             self.user_vectors = np.load(f"{load_dir}/user_vectors.npy")
             self.item_vectors = np.load(f"{load_dir}/item_vectors.npy")
 
